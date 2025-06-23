@@ -1,0 +1,290 @@
+# 🧪 Luci QA Testing Suite
+
+Sistema automatizado de testing para validar el funcionamiento del sistema de callbacks en el chatbot Luci across múltiples dispositivos y navegadores.
+
+## 🎯 Objetivo
+
+Detectar y prevenir fallos en el sistema de callbacks que causan que los mensajes lleguen a Supabase pero no se muestren en el frontend, especialmente en Safari móvil y otros dispositivos con limitaciones de WebSocket.
+
+## 🏗️ Arquitectura del Sistema
+
+```
+┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Playwright    │────│   Frontend   │────│   Supabase      │
+│   Test Runner   │    │   (Luci)     │    │   (Callbacks)   │
+└─────────────────┘    └──────────────┘    └─────────────────┘
+         │                      │                      │
+         │                      │                      │
+         ▼                      ▼                      ▼
+┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
+│   Multi-device  │    │   Realtime   │    │   Polling       │
+│   Testing       │    │   WebSocket  │    │   Fallback      │
+└─────────────────┘    └──────────────┘    └─────────────────┘
+```
+
+## 🚀 Instalación Rápida
+
+```bash
+# 1. Navegar a la carpeta de testing
+cd qa-testing/
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Instalar navegadores de Playwright
+npm run install-browsers
+
+# 4. Ejecutar test rápido
+npm run test:quick
+```
+
+## 📋 Tipos de Tests
+
+### 🏃 Quick Tests
+Tests básicos en Chrome Desktop para validación rápida.
+```bash
+node scripts/run-qa.js quick
+npm test
+```
+
+### 🌍 Full Tests
+Tests completos en todos los dispositivos y navegadores.
+```bash
+node scripts/run-qa.js full
+node scripts/run-qa.js full --headed  # Con navegador visible
+```
+
+### 📈 Monitoring Tests
+Tests de monitorización continua para detectar degradación.
+```bash
+node scripts/run-qa.js monitoring --report
+```
+
+### 💪 Stress Tests
+Tests de stress y casos extremos.
+```bash
+node scripts/run-qa.js stress --debug
+```
+
+## 🔧 Configuración
+
+### Variables de Entorno
+Crear archivo `.env` en `qa-testing/`:
+```env
+# URLs
+BASE_URL=https://lucy-chatbot.vercel.app
+CALLBACK_WEBHOOK=https://lucy-chatbot.vercel.app/api/callback
+
+# Supabase (ya incluidas en el código)
+SUPABASE_URL=https://uxyxxhsgkprnuxohjhbc.supabase.co
+SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Timeouts (opcional)
+CALLBACK_TIMEOUT=30000
+PAGE_LOAD_TIMEOUT=15000
+```
+
+### Dispositivos Testados
+
+| Categoría | Dispositivo | Navegador | Viewport |
+|-----------|-------------|-----------|----------|
+| **Desktop** | Chrome | Chromium | 1280x720 |
+| **Desktop** | Firefox | Firefox | 1280x720 |
+| **Desktop** | Safari | WebKit | 1280x720 |
+| **Mobile** | Pixel 7 | Chrome | 412x915 |
+| **Mobile** | iPhone 14 | Safari | 390x844 |
+| **Mobile** | iPhone 14 Pro Max | Safari | 430x932 |
+| **Mobile** | Galaxy S9+ | Chrome | 320x658 |
+| **Tablet** | iPad Pro | Safari | 1024x1366 |
+| **Tablet** | Galaxy Tab S4 | Chrome | 712x1138 |
+
+## 🧩 Estructura del Proyecto
+
+```
+qa-testing/
+├── package.json              # Dependencias y scripts
+├── playwright.config.js      # Configuración de Playwright
+├── README.md                 # Esta documentación
+├──
+├── config/
+│   └── test-config.js        # Configuración global de tests
+├──
+├── utils/
+│   └── test-helpers.js       # Funciones auxiliares
+├──
+├── tests/
+│   ├── callback-qa.test.js   # Tests principales de callback
+│   ├── stress-test.test.js   # Tests de stress
+│   └── monitoring.test.js    # Tests de monitorización
+├──
+├── scripts/
+│   └── run-qa.js            # Script principal de ejecución
+├──
+└── reports/                 # Reportes generados
+    ├── test-results/        # Resultados JSON
+    ├── playwright-report/   # Reportes HTML
+    └── qa-reports/         # Reportes personalizados
+```
+
+## 🔍 Cómo Funciona
+
+### 1. Flujo Principal del Test
+```mermaid
+sequenceDiagram
+    participant T as Test
+    participant P as Page
+    participant S as Supabase
+    participant F as Frontend
+    
+    T->>P: Cargar página
+    T->>P: Activar modo test
+    T->>S: Insertar callback
+    P->>S: Suscripción Realtime
+    S->>P: Callback via WebSocket
+    P->>F: Mostrar propiedades
+    T->>P: Verificar UI
+    T->>S: Marcar como procesado
+```
+
+### 2. Sistema de Fallback
+Si Realtime falla (especialmente en Safari móvil):
+1. **Polling automático** cada 6 segundos
+2. **Timeout** de 3 minutos
+3. **Verificación dual**: UI + Supabase
+
+### 3. Detección de Errores
+- **Logs de consola** capturados en tiempo real
+- **Screenshots** automáticos en fallos
+- **Métricas de rendimiento** registradas
+- **Análisis de causas** incluido en reportes
+
+## 📊 Interpretación de Resultados
+
+### ✅ Test Exitoso
+```
+✅ ÉXITO: 2 propiedades mostradas correctamente
+✓ Loading state activado
+✓ Callback insertado en Supabase con ID: 123
+✓ Loading desapareció: true
+✓ Callback procesado en Supabase: true
+```
+
+### ❌ Test Fallido
+```
+❌ FALLO EN UI: Callback no apareció en UI: timeout
+Session ID: qa_test_1234567890_abc123
+Callback ID: 456
+Console Errors: [
+  {
+    "message": "WebSocket connection failed",
+    "timestamp": "2024-01-15T10:30:00.000Z"
+  }
+]
+```
+
+### 📈 Métricas de Rendimiento
+```json
+{
+  "browser": "webkit",
+  "viewport": {"width": 390, "height": 844},
+  "loadTime": 3500,
+  "callbackTime": 12000,
+  "successRate": 0.8,
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+## 🚨 Alertas y Monitorización
+
+### CI/CD Integration
+- **GitHub Actions** ejecuta tests automáticamente
+- **Health checks** cada 15 minutos
+- **Full tests** en cada push a main
+- **Stress tests** bajo demanda
+
+### Sistema de Alertas
+- **Issues automáticos** en GitHub cuando fallan tests críticos
+- **Slack notifications** (configurable)
+- **Email reports** con métricas detalladas
+
+## 🛠️ Troubleshooting
+
+### Problema: Tests fallan en Safari móvil
+**Solución:**
+1. Verificar que el polling esté activado
+2. Aumentar timeouts en `test-config.js`
+3. Revisar logs de WebSocket en consola
+
+### Problema: Timeouts frecuentes
+**Solución:**
+1. Verificar conectividad a Supabase
+2. Comprobar latencia de red
+3. Ajustar `CALLBACK_TIMEOUT` en configuración
+
+### Problema: Muchos fallos aleatorios
+**Solución:**
+1. Ejecutar con `--workers 1` (sin paralelización)
+2. Añadir delays entre tests
+3. Verificar memoria disponible
+
+## 📝 Comandos Útiles
+
+```bash
+# Tests con navegador visible para debugging
+npm run test:headed
+
+# Tests con UI interactiva de Playwright
+npm run test:ui
+
+# Ver último reporte HTML
+npm run test:report
+
+# Test específico en un dispositivo
+npx playwright test --project="Mobile Safari iPhone"
+
+# Test con máximo logging
+npx playwright test --debug
+
+# Limpiar resultados anteriores
+rm -rf test-results/ playwright-report/ qa-reports/
+```
+
+## 🔄 Mantenimiento
+
+### Actualización de Dispositivos
+Editar `playwright.config.js` para añadir nuevos dispositivos:
+```javascript
+{
+  name: 'Nuevo Dispositivo',
+  use: { ...devices['Device Name'] }
+}
+```
+
+### Actualización de Tests
+Modificar archivos en `tests/` según nuevas funcionalidades del chatbot.
+
+### Monitorización Continua
+El sistema está configurado para ejecutarse automáticamente:
+- **Cada hora**: Tests de monitorización
+- **Cada push**: Tests completos
+- **Cada PR**: Tests rápidos
+
+## 📞 Soporte
+
+Si encuentras problemas o necesitas ayuda:
+
+1. **Revisar logs** en `test-results/`
+2. **Consultar documentación** de Playwright
+3. **Ejecutar tests** en modo debug
+4. **Verificar configuración** de Supabase
+
+---
+
+## 🎯 Métricas de Éxito
+
+- **95%+ de éxito** en tests de monitorización
+- **0 fallos críticos** no detectados
+- **< 30s** tiempo promedio de callback
+- **< 15s** tiempo de carga de página
+
+¡El sistema está diseñado para mantener la calidad del chatbot Luci en todos los dispositivos! 🚀
