@@ -1,0 +1,355 @@
+name: 🧪 QA Testing - Callback Validation
+
+on:
+  # Ejecutar en push a main
+  push:
+    branches: [ main ]
+  
+  # Ejecutar en pull requests
+  pull_request:
+    branches: [ main ]
+  
+  # Ejecutar manualmente
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Modo de testing'
+        required: true
+        default: 'quick'
+        type: choice
+        options:
+          - quick
+          - full
+          - monitoring
+          - stress
+      
+      headed:
+        description: 'Ejecutar con navegador visible'
+        required: false
+        default: false
+        type: boolean
+  
+  # Ejecutar cada hora (monitorización continua)
+  schedule:
+    - cron: '0 * * * *'  # Cada hora
+    - cron: '*/15 * * * *'  # Cada 15 minutos para health checks
+
+jobs:
+  qa-quick:
+    name: 🚀 Quick QA Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'quick')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'qa-testing/package-lock.json'
+      
+      - name: 📚 Install dependencies
+        working-directory: ./qa-testing
+        run: npm ci
+      
+      - name: 🌐 Install Playwright browsers
+        working-directory: ./qa-testing
+        run: npx playwright install --with-deps
+      
+      - name: 🧪 Run Quick QA Tests
+        working-directory: ./qa-testing
+        run: node scripts/run-qa.js quick --report
+        env:
+          CI: true
+      
+      - name: 📊 Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-quick-results
+          path: |
+            qa-testing/test-results/
+            qa-testing/playwright-report/
+            qa-testing/qa-reports/
+          retention-days: 7
+
+  qa-full:
+    name: 🌍 Full QA Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'full')
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'qa-testing/package-lock.json'
+      
+      - name: 📚 Install dependencies
+        working-directory: ./qa-testing
+        run: npm ci
+      
+      - name: 🌐 Install Playwright browsers
+        working-directory: ./qa-testing
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      
+      - name: 🧪 Run Full QA Tests
+        working-directory: ./qa-testing
+        run: node scripts/run-qa.js full --report
+        env:
+          CI: true
+          BROWSER: ${{ matrix.browser }}
+      
+      - name: 📊 Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-full-results-${{ matrix.browser }}
+          path: |
+            qa-testing/test-results/
+            qa-testing/playwright-report/
+            qa-testing/qa-reports/
+          retention-days: 14
+
+  qa-monitoring:
+    name: 📈 Monitoring Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'monitoring')
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'qa-testing/package-lock.json'
+      
+      - name: 📚 Install dependencies
+        working-directory: ./qa-testing
+        run: npm ci
+      
+      - name: 🌐 Install Playwright browsers
+        working-directory: ./qa-testing
+        run: npx playwright install --with-deps chromium webkit
+      
+      - name: 📊 Run Monitoring Tests
+        working-directory: ./qa-testing
+        run: node scripts/run-qa.js monitoring --report
+        env:
+          CI: true
+      
+      - name: 📈 Parse monitoring results
+        working-directory: ./qa-testing
+        run: |
+          echo "## 📊 Monitoring Results" >> $GITHUB_STEP_SUMMARY
+          if [ -f "qa-reports/qa-report-"*.json ]; then
+            latest_report=$(ls -t qa-reports/qa-report-*.json | head -n1)
+            echo "**Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+            echo "**Report:** $latest_report" >> $GITHUB_STEP_SUMMARY
+            
+            # Extraer métricas clave del reporte
+            passed=$(jq '.summary.passed' "$latest_report")
+            failed=$(jq '.summary.failed' "$latest_report")
+            duration=$(jq '.summary.duration' "$latest_report")
+            
+            echo "**Tests Passed:** $passed" >> $GITHUB_STEP_SUMMARY
+            echo "**Tests Failed:** $failed" >> $GITHUB_STEP_SUMMARY
+            echo "**Duration:** $(echo "scale=2; $duration / 1000 / 60" | bc) minutes" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: 🚨 Alert on failures
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 QA Monitoring Alert - Callback System Failure',
+              body: `
+              ## ⚠️ Sistema de Callback con Fallos Detectados
+              
+              **Timestamp:** ${new Date().toISOString()}
+              **Workflow:** ${context.workflow}
+              **Run ID:** ${context.runId}
+              
+              ### 🔍 Detalles
+              Los tests de monitorización han detectado fallos en el sistema de callbacks.
+              
+              ### 📊 Enlaces
+              - [Ver detalles del workflow](${context.payload.repository.html_url}/actions/runs/${context.runId})
+              - [Descargar reportes](${context.payload.repository.html_url}/actions/runs/${context.runId}#artifacts)
+              
+              ### 🛠️ Acciones Recomendadas
+              1. Revisar los logs del workflow
+              2. Verificar el estado de Supabase Realtime
+              3. Comprobar la conectividad de la aplicación
+              4. Ejecutar tests manuales si es necesario
+              
+              **Prioridad:** Alta 🔥
+              `,
+              labels: ['bug', 'qa-alert', 'high-priority']
+            });
+      
+      - name: 📊 Upload monitoring results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-monitoring-results
+          path: |
+            qa-testing/test-results/
+            qa-testing/playwright-report/
+            qa-testing/qa-reports/
+          retention-days: 30
+
+  qa-stress:
+    name: 💪 Stress Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.test_mode == 'stress'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'qa-testing/package-lock.json'
+      
+      - name: 📚 Install dependencies
+        working-directory: ./qa-testing
+        run: npm ci
+      
+      - name: 🌐 Install Playwright browsers
+        working-directory: ./qa-testing
+        run: npx playwright install --with-deps
+      
+      - name: 💪 Run Stress Tests
+        working-directory: ./qa-testing
+        run: node scripts/run-qa.js stress --report
+        env:
+          CI: true
+      
+      - name: 📊 Upload stress results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-stress-results
+          path: |
+            qa-testing/test-results/
+            qa-testing/playwright-report/
+            qa-testing/qa-reports/
+          retention-days: 14
+
+  report-summary:
+    name: 📋 Generate Summary Report
+    runs-on: ubuntu-latest
+    needs: [qa-quick, qa-full, qa-monitoring]
+    if: always() && (needs.qa-quick.result != 'skipped' || needs.qa-full.result != 'skipped' || needs.qa-monitoring.result != 'skipped')
+    
+    steps:
+      - name: 📥 Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: 📊 Generate combined report
+        run: |
+          echo "# 🧪 QA Testing Summary Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Generated:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Buscar archivos de reporte
+          find artifacts -name "qa-report-*.json" -type f | while read report; do
+            echo "Processing: $report"
+            
+            if [ -f "$report" ]; then
+              echo "## 📊 $(basename $(dirname $report))" >> $GITHUB_STEP_SUMMARY
+              
+              # Usar python para procesar JSON (más confiable que jq en algunos runners)
+              python3 -c "
+import json
+import sys
+try:
+    with open('$report', 'r') as f:
+        data = json.load(f)
+    summary = data.get('summary', {})
+    device_results = data.get('deviceResults', {})
+    
+    print(f'**Total Tests:** {summary.get(\"total\", 0)}')
+    print(f'**Passed:** {summary.get(\"passed\", 0)} ✅')
+    print(f'**Failed:** {summary.get(\"failed\", 0)} ❌')
+    
+    if summary.get('duration'):
+        duration_min = summary['duration'] / 1000 / 60
+        print(f'**Duration:** {duration_min:.2f} minutes')
+    
+    print()
+    print('### Device Results:')
+    for device, results in device_results.items():
+        total = results.get('total', 0)
+        passed = results.get('passed', 0)
+        if total > 0:
+            rate = (passed / total) * 100
+            print(f'- **{device}:** {passed}/{total} ({rate:.1f}%)')
+    
+except Exception as e:
+    print(f'Error processing report: {e}')
+" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+      
+      - name: 🏷️ Add status labels
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            // Remover labels de QA previos
+            const qaLabels = labels.filter(label => label.name.startsWith('qa-'));
+            for (const label of qaLabels) {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                name: label.name,
+              });
+            }
+            
+            // Determinar nuevo label basado en resultados
+            const allJobsSuccessful = '${{ needs.qa-quick.result }}' === 'success' && 
+                                     ('${{ needs.qa-full.result }}' === 'success' || '${{ needs.qa-full.result }}' === 'skipped');
+            
+            const newLabel = allJobsSuccessful ? 'qa-passed' : 'qa-failed';
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [newLabel]
+            });
