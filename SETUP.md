@@ -74,7 +74,7 @@ CALLBACK_TIMEOUT=45000
 PAGE_LOAD_TIMEOUT=15000
 
 # URLs (ya configuradas en el código)
-BASE_URL=https://lucy-chatbot.vercel.app
+BASE_URL=https://luci-chatbot.vercel.app
 ```
 
 ## 🧪 Primeras Pruebas
