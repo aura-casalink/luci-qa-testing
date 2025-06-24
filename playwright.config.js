@@ -16,7 +16,7 @@ export default defineConfig({
     timeout: 30000 // 30 segundos para assertions
   },
   use: {
-    baseURL: 'https://lucy-chatbot.vercel.app',
+    baseURL: 'https://luci-chatbot.vercel.app',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'
