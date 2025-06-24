@@ -3,14 +3,14 @@ dotenv.config();
 
 export const TEST_CONFIG = {
   // URLs
-  BASE_URL: 'https://lucy-chatbot.vercel.app',
+  BASE_URL: 'https://luci-chatbot.vercel.app/',
   
   // Supabase config
   SUPABASE_URL: 'https://uxyxxhsgkprnuxohjhbc.supabase.co',
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4eXh4aHNna3BybnV4b2hqaGJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1NTM3ODEsImV4cCI6MjA1ODEyOTc4MX0.P_ggSy3oU2AvS55fQdwpnk3aFgznfVr6uCdqWH36IwY',
   
   // Webhook para simular callback
-  CALLBACK_WEBHOOK: 'https://lucy-chatbot.vercel.app/api/callback',
+  CALLBACK_WEBHOOK: 'https://luci-chatbot.vercel.app/api/callback',
   
   // Timeouts
   CALLBACK_TIMEOUT: 45000, // 45 segundos para callbacks de iteración
