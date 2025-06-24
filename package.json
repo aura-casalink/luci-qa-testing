@@ -1,7 +1,7 @@
 {
   "name": "luci-qa-testing",
   "version": "1.0.0",
-  "type": "module", 
+   "type": "module", 
   "description": "QA Testing para callback de Luci chatbot",
   "scripts": {
     "test": "playwright test",
