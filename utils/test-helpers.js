@@ -20,9 +20,17 @@ export class TestHelpers {
 
   // Activar modo test en la página
   async activateTestMode(page, sessionId) {
-    return await page.evaluate((sessionId) => {
-      return window.activateTestMode(sessionId);
-    }, sessionId);
+      // Primero hacer click en "Buscar propiedades para comprar" si estamos en pantalla de bienvenida
+      const welcomeScreen = await page.locator('.welcome-screen').isVisible();
+      if (welcomeScreen) {
+          await page.click('.option-button.primary');
+          await page.waitForSelector('.chat-screen', { timeout: 10000 });
+          console.log('✅ Conversación iniciada desde pantalla de bienvenida');
+      }
+      
+      return await page.evaluate((sessionId) => {
+          return window.activateTestMode(sessionId);
+      }, sessionId);
   }
 
   // Simular callback insertando directamente en Supabase
