@@ -29,6 +29,19 @@ test.describe('Callback QA Testing', () => {
       // 2. Obtener información del dispositivo
       const viewport = page.viewportSize();
       const userAgent = await page.evaluate(() => navigator.userAgent);
+      // 2.5. Iniciar conversación desde pantalla de bienvenida
+      console.log('🎯 Iniciando conversación desde pantalla de bienvenida...');
+      
+      // Hacer click en "Buscar propiedades para comprar"
+      await page.click('.option-button.primary');
+      
+      // Esperar a que aparezca la pantalla de chat
+      await page.waitForSelector('.chat-screen', { timeout: 10000 });
+      await page.waitForSelector('#chatInput', { timeout: 10000 });
+      
+      console.log('✅ Conversación iniciada correctamente');
+      
+      
       const deviceInfo = {
         ...testHelpers.getDeviceInfo(browserName, viewport),
         userAgent
