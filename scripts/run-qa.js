@@ -66,7 +66,7 @@ Ejemplos:
   node scripts/run-qa.js iterations  # Test las iteraciones 2-3 problemáticas
 `);
 }
-}
+
 
 function parseArgs() {
   const args = process.argv.slice(2);
