@@ -26,6 +26,10 @@ test.describe('🔄 Tests de Callbacks de Iteración', () => {
       // 1. Cargar página y preparar
       await page.goto('/');
       await iterationHelpers.waitForPageReady(page);
+
+      // Iniciar conversación desde pantalla de bienvenida
+      await page.click('.option-button.primary');
+      await page.waitForSelector('.chat-screen', { timeout: 10000 });
       
       // 2. Simular flujo completo hasta iteración 3
       const flowResult = await iterationHelpers.simulateFullConversationFlow(page, sessionId, 3);
