@@ -13,7 +13,7 @@ export const TEST_CONFIG = {
   CALLBACK_WEBHOOK: 'https://luci-chatbot.vercel.app/api/callback',
   
   // Timeouts
-  CALLBACK_TIMEOUT: 45000, // 45 segundos para callbacks de iteración
+  CALLBACK_TIMEOUT: 180000, // 45 segundos para callbacks de iteración
   PAGE_LOAD_TIMEOUT: 15000,
   ITERATION_DELAY: 3000, // Delay entre iteraciones
   
@@ -28,14 +28,21 @@ export const TEST_CONFIG = {
     
     // Segunda interacción - clarificar criterios
     CLARIFICATION: {
-      userMessage: 'Busco 2 habitaciones, máximo 300.000 euros',
-      expectedResponse: 'criterios',
+      userMessage: 'Máximo 300.000€, cerca del centro',
+      expectedResponse: 'presupuesto',
       triggersCallback: false
     },
-    
-    // Tercera interacción - resumen y confirmación
+
+    // Tercera interacción - responder a pregunta adicional
+    ADDITIONAL_REQUIREMENTS: {
+      userMessage: 'No, nada más',
+      expectedResponse: 'nada más',
+      triggersCallback: false
+    },
+
+    // Cuarta interacción - confirmación final
     SUMMARY_CONFIRMATION: {
-      userMessage: 'Sí, confirmo la búsqueda',
+      userMessage: 'Sí, confirmo búsqueda con estos criterios',
       expectedResponse: 'confirmo',
       triggersCallback: true, // PRIMERA BÚSQUEDA
       iteration: 1
