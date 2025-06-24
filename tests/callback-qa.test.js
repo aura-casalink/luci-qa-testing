@@ -49,29 +49,29 @@ test.describe('Callback QA Testing', () => {
       
       console.log(`Testing en: ${browserName} - ${viewport.width}x${viewport.height}`);
       
-      // 3. Simular conversación completa hasta confirmación
-      console.log('💬 Simulando conversación hasta confirmación...');
+      // 3. Simular conversación básica que dispara callback
+      console.log('💬 Iniciando conversación...');
 
-      // Primer mensaje - responder a la pregunta inicial
+      // Primer mensaje
       await page.fill('#chatInput', 'Quiero buscar un piso en Madrid de 2 habitaciones');
       await page.click('#sendButton');
-
-      // Esperar respuesta de Luci
       await page.waitForSelector('.message.assistant:last-child', { timeout: 15000 });
-      console.log('✅ Primera respuesta recibida');
 
-      // Segundo mensaje - dar más detalles
+      // Segundo mensaje - presupuesto
       await testHelpers.sleep(2000);
-      await page.fill('#chatInput', 'Máximo 300.000 euros, cerca del centro');
+      await page.fill('#chatInput', 'Máximo 300.000€, cerca del centro');
       await page.click('#sendButton');
-
-      // Esperar respuesta de Luci
       await page.waitForSelector('.message.assistant:last-child', { timeout: 15000 });
-      console.log('✅ Segunda respuesta recibida');
 
-      // Tercer mensaje - confirmar búsqueda (esto debería activar Supabase)
+      // Tercer mensaje - no necesidades adicionales
       await testHelpers.sleep(2000);
-      await page.fill('#chatInput', 'Sí, confirmo la búsqueda con esos criterios');
+      await page.fill('#chatInput', 'No, nada más');
+      await page.click('#sendButton');
+      await page.waitForSelector('.message.assistant:last-child', { timeout: 15000 });
+
+      // Cuarto mensaje - confirmación
+      await testHelpers.sleep(2000);
+      await page.fill('#chatInput', 'Sí, confirmo búsqueda con estos criterios');
       await page.click('#sendButton');
 
       // Esperar que aparezca el estado de búsqueda
