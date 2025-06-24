@@ -105,7 +105,7 @@ function buildPlaywrightCommand(config) {
   // Agregar proyectos específicos
   if (modeConfig.projects) {
     modeConfig.projects.forEach(project => {
-      cmd.push('--project', project);
+      cmd.push('--project', `"${project}"`);
     });
   }
   
