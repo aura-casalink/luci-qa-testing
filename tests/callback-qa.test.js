@@ -49,9 +49,42 @@ test.describe('Callback QA Testing', () => {
       
       console.log(`Testing en: ${browserName} - ${viewport.width}x${viewport.height}`);
       
-      // 3. Activar modo test
-      const testModeActivated = await testHelpers.activateTestMode(page, sessionId);
-      expect(testModeActivated).toBe(true);
+      // 3. Simular conversación completa hasta confirmación
+    console.log('💬 Simulando conversación hasta confirmación...');
+    
+    // Primer mensaje - responder a la pregunta inicial
+    await page.fill('#chatInput', 'Quiero buscar un piso en Madrid de 2 habitaciones');
+    await page.click('#sendButton');
+    
+    // Esperar respuesta de Luci
+    await page.waitForSelector('.message.assistant:last-child', { timeout: 15000 });
+    console.log('✅ Primera respuesta recibida');
+    
+    // Segundo mensaje - dar más detalles
+    await testHelpers.sleep(2000);
+    await page.fill('#chatInput', 'Máximo 300.000 euros, cerca del centro');
+    await page.click('#sendButton');
+    
+    // Esperar respuesta de Luci
+    await page.waitForSelector('.message.assistant:last-child', { timeout: 15000 });
+    console.log('✅ Segunda respuesta recibida');
+    
+    // Tercer mensaje - confirmar búsqueda (esto debería activar Supabase)
+    await testHelpers.sleep(2000);
+    await page.fill('#chatInput', 'Sí, confirmo la búsqueda con esos criterios');
+    await page.click('#sendButton');
+    
+    // Esperar que aparezca el estado de búsqueda
+    await page.waitForSelector('#searchLoadingMessage', { timeout: 10000 });
+    console.log('✅ Estado de búsqueda activado - Suscripción a Supabase iniciada');
+    
+    // Ahora activar modo test para insertar callback
+    const testModeActivated = await page.evaluate((sessionId) => {
+        window.currentSessionId = sessionId;
+        window.pendingCallback = true;
+        console.log('Modo test activado para session:', sessionId);
+        return true;
+    }, sessionId);
       
       // 4. Verificar que está en loading state
       await expect(page.locator('#searchLoadingMessage')).toBeVisible({ timeout: 5000 });
